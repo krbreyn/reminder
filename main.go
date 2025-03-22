@@ -19,7 +19,7 @@ func main() {
 		Message: "This is my monthly notification!",
 		Handler: MonthlyTimeHandler{
 			Day: 22,
-			Prereq: DailyTimeHandler{
+			Prereq: &DailyTimeHandler{
 				Hour:         time.Now().Hour(),
 				Minute:       time.Now().Minute(),
 				wasDoneToday: false,
@@ -32,7 +32,7 @@ func main() {
 		Message: "This is my weekly notification!",
 		Handler: WeeklyTimeHandler{
 			Day: time.Now().Weekday(),
-			Prereq: DailyTimeHandler{
+			Prereq: &DailyTimeHandler{
 				Hour:         time.Now().Hour(),
 				Minute:       time.Now().Minute(),
 				wasDoneToday: false,
@@ -51,15 +51,15 @@ func main() {
 		},
 	}
 
-	ticker := time.NewTicker(time.Minute * 1)
+	ticker := time.NewTicker(time.Second * 5)
 
 	notifs := []Notification{new_daily, new_weekly, new_monthly}
 
+	now := time.Now()
 	for {
 		<-ticker.C
 
-		now := time.Now()
-
+		now = now.Add(time.Minute * 2)
 		for _, n := range notifs {
 			if n.Handler.Verify(now) {
 				err := beeep.Notify("Reminder!", n.Message, "")
@@ -104,7 +104,7 @@ func (h *DailyTimeHandler) Verify(t time.Time) bool {
 
 type WeeklyTimeHandler struct {
 	Day    time.Weekday
-	Prereq DailyTimeHandler
+	Prereq *DailyTimeHandler
 }
 
 func (h WeeklyTimeHandler) Verify(t time.Time) bool {
@@ -113,7 +113,7 @@ func (h WeeklyTimeHandler) Verify(t time.Time) bool {
 
 type MonthlyTimeHandler struct {
 	Day    int
-	Prereq DailyTimeHandler
+	Prereq *DailyTimeHandler
 }
 
 func (h MonthlyTimeHandler) Verify(t time.Time) bool {
