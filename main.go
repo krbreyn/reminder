@@ -20,8 +20,10 @@ func main() {
 		Handler: MonthlyTimeHandler{
 			Day: 22,
 			Prereq: DailyTimeHandler{
-				Hour:   time.Now().Hour(),
-				Minute: time.Now().Minute(),
+				Hour:         time.Now().Hour(),
+				Minute:       time.Now().Minute(),
+				wasDoneToday: false,
+				wasDoneAt:    time.Time{},
 			},
 		},
 	}
@@ -31,17 +33,21 @@ func main() {
 		Handler: WeeklyTimeHandler{
 			Day: time.Now().Weekday(),
 			Prereq: DailyTimeHandler{
-				Hour:   time.Now().Hour(),
-				Minute: time.Now().Minute(),
+				Hour:         time.Now().Hour(),
+				Minute:       time.Now().Minute(),
+				wasDoneToday: false,
+				wasDoneAt:    time.Time{},
 			},
 		},
 	}
 
 	new_daily := Notification{
 		Message: "This is my daily notification!",
-		Handler: DailyTimeHandler{
-			Hour:   time.Now().Hour(),
-			Minute: time.Now().Minute(),
+		Handler: &DailyTimeHandler{
+			Hour:         time.Now().Hour(),
+			Minute:       time.Now().Minute(),
+			wasDoneToday: false,
+			wasDoneAt:    time.Time{},
 		},
 	}
 
@@ -51,10 +57,13 @@ func main() {
 
 	for {
 		<-ticker.C
+
 		now := time.Now()
+
 		for _, n := range notifs {
 			if n.Handler.Verify(now) {
 				err := beeep.Notify("Reminder!", n.Message, "")
+
 				if err != nil {
 					panic(err)
 				}
@@ -73,12 +82,24 @@ type TimeHandler interface {
 }
 
 type DailyTimeHandler struct {
-	Hour   int
-	Minute int
+	Hour         int
+	Minute       int
+	wasDoneToday bool
+	wasDoneAt    time.Time
 }
 
-func (h DailyTimeHandler) Verify(t time.Time) bool {
-	return t.Hour() >= h.Hour && t.Minute() >= h.Minute
+func (h *DailyTimeHandler) Verify(t time.Time) bool {
+	if h.wasDoneToday && t.Day() != h.wasDoneAt.Day() {
+		h.wasDoneToday = false
+	}
+
+	if !h.wasDoneToday && t.Hour() >= h.Hour && t.Minute() >= h.Minute {
+		h.wasDoneToday = true
+		h.wasDoneAt = t
+		return true
+	}
+
+	return false
 }
 
 type WeeklyTimeHandler struct {
