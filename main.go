@@ -1,20 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"os"
+	"os/exec"
 	"time"
-
-	"github.com/gen2brain/beeep"
 )
 
 func main() {
-	err := beeep.Alert("test notif", "test notif desc", "")
-	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		os.Exit(1)
-	}
-
 	new_monthly := Notification{
 		Message: "This is my monthly notification!",
 		Handler: MonthlyTimeHandler{
@@ -62,14 +53,23 @@ func main() {
 		now = now.Add(time.Minute * 2)
 		for _, n := range notifs {
 			if n.Handler.Verify(now) {
-				err := beeep.Notify("Reminder!", n.Message, "")
-
+				err := Notify(n.Message)
 				if err != nil {
 					panic(err)
 				}
 			}
 		}
 	}
+}
+
+func Notify(msg string) error {
+	send, err := exec.LookPath("kdialog")
+	if err != nil {
+		return err
+	}
+
+	c := exec.Command(send, "--title", "Reminder!", "--sorry", msg)
+	return c.Run()
 }
 
 type Notification struct {
